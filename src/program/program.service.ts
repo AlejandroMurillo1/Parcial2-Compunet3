@@ -22,6 +22,8 @@ export class ProgramService {
     @InjectRepository(Program)
     private readonly programRepository: Repository<Program>,
     private readonly datasource: DataSource,
+    @InjectRepository(Student)
+    private readonly studentRepository: Repository<Student>,
   ) {}
 
   // TODO Reto 1: create(createProgramDto, user) -> guarda el programa
@@ -65,17 +67,16 @@ export class ProgramService {
   async findOne(id: string) {
     try {
       const program = await this.programRepository.findOne({
-          where: { id },
+        where: { id },
         relations: { students: true },
-        });
+      });
 
       if (!program) {
         throw new NotFoundException('Program not found');
       }
 
       return program;
-
-    }catch (error){
+    } catch (error) {
       this.handleException(error);
     }
   }
@@ -85,9 +86,7 @@ export class ProgramService {
   //   Mismo patrón del update de estudiantes corregido en clase (combinar las notas):
   //   traer los actuales -> combinar con los nuevos -> guardar la lista completa.
   //   Si algún id no existe: 404 y rollback.
-  async assignStudents(id:string, assignStudentsDto: AssignStudentsDto) {
-    const program = await this.findOne(id);
-
+  async assignStudents(id: string, assignStudentsDto: AssignStudentsDto) {
     const queryRunner = this.datasource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -106,12 +105,50 @@ export class ProgramService {
       }
 
       await queryRunner.commitTransaction();
-    }catch (error) {
+    } catch (error) {
       await queryRunner.rollbackTransaction();
       this.handleException(error);
     } finally {
       await queryRunner.release();
     }
+    return await this.findOne(id);
+  }
+
+  async assignStudentsV2(id: string, assignStudentsDto: AssignStudentsDto) {
+    const program = await this.programRepository.preload({
+      id,
+    });
+
+    if (!program) {
+      throw new NotFoundException('Program not found');
+    }
+
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const currentStudents = await queryRunner.manager.find(Student, {
+        where: { program: { id } },
+      });
+
+      for (const studentId of assignStudentsDto.studentIds) {
+        const existing = currentStudents.find(
+          (student) => student.id === studentId,
+        );
+
+        if (existing) {
+          existing.program = program;
+        }else {
+          currentStudents.push(
+            this.studentRepository.create()
+          )
+        }
+      }
+    } catch(error) {
+      this.handleException(error);
+    }
+
   }
 
   // TODO Reto 3: bulkCreate(bulkCreateProgramDto, user) -> crea todos los programas o ninguno
