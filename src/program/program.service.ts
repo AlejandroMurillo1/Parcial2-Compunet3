@@ -10,6 +10,7 @@ import { Program } from './entities/program.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { User } from '../user/entities/user.entity';
+import { PaginationDto } from '../student/dto/pagination.dto';
 
 @Injectable()
 export class ProgramService {
@@ -46,6 +47,17 @@ export class ProgramService {
   }
 
   // TODO Reto 1: findAll(paginationDto) -> lista paginada (limit / skip)
+  async findAll(paginationDto: PaginationDto) {
+    try {
+      const { limit, skip } = paginationDto;
+      return await this.programRepository.find({
+        skip: skip,
+        take: limit,
+      });
+    } catch (error) {
+      this.handleException(error);
+    }
+  }
 
   // TODO Reto 2: findOne(id) -> programa con sus estudiantes, 404 si no existe
 

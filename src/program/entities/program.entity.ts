@@ -8,7 +8,7 @@
 //
 // Usa imports relativos (ej. "../../student/entities/student.entity"), no "src/...":
 // Jest no resuelve el alias "src/" y el test de Student dejaría de correr.
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 
 @Entity()
@@ -22,8 +22,9 @@ export class Program {
   @Column('text', {unique:true})
   code:string;
 
-  @Column('number')
+  @Column('int')
   credits:number;
 
-  createdBy?: User
+  @ManyToOne(() => User, {nullable:false})
+  createdBy?: User;
 }

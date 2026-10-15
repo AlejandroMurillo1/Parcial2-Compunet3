@@ -23,8 +23,7 @@ import { ProgramModule } from './program/program.module';
     UserModule,
     SeedModule,
     // TODO Reto 1: registra aquí el ProgramModule
-    ProgramModule
-
+    ProgramModule,
   ],
   controllers: [],
   providers: [],

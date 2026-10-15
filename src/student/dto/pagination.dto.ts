@@ -5,13 +5,12 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 export class PaginationDto{
     @ApiPropertyOptional({ example: 10, description: "Max number of students to return", minimum: 1 })
     @IsOptional()
-    @IsPositive()
+    @Min(0)
     @Type(()=> Number)
     limit:number;
 
     @ApiPropertyOptional({ example: 1, description: "Number of students to skip", minimum: 1 })
     @IsOptional()
-    @IsPositive()
     @Type(()=> Number)
     @Min(0)
     skip:number;
