@@ -17,7 +17,7 @@ import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
 
 @Injectable()
 export class ProgramService {
-  private readonly logger = new Logger(ProgramService.name);
+  private readonly logger = new Logger('ProgramService');
   // TODO Reto 1: inyecta el repositorio de Program (y lo que necesites para las transacciones)
   constructor(
     @InjectRepository(Program)

@@ -8,10 +8,7 @@ import { UserModule } from 'src/user/user.module';
 
 @Module({
   controllers: [StudentController],
-  imports:[
-    TypeOrmModule.forFeature([Student, Grades]),
-    UserModule
-  ],
+  imports: [TypeOrmModule.forFeature([Student, Grades]), UserModule],
   providers: [StudentService],
   exports: [StudentService],
 })
