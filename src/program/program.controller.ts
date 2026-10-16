@@ -5,6 +5,7 @@ import { GetUser } from '../user/decorators/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { PaginationDto } from '../student/dto/pagination.dto';
 import { AssignStudentsDto } from './dto/assign-students.dto';
+import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
 
 @Controller('program')
 export class ProgramController {
@@ -25,15 +26,19 @@ export class ProgramController {
   findOne(@Param('id') id: string) {
     return this.programService.findOne(id);
   }
-  // TODO Reto 2: PATCH  /api/program/:id/students  -> agregar estudiantes (acumulativo)
 
+  // TODO Reto 2: PATCH  /api/program/:id/students  -> agregar estudiantes (acumulativo)
   @Patch(':id/students')
   addStudents(
     @Param('id') programId: string,
     @Body() assignStudentsDto: AssignStudentsDto,
   ) {
-    return this.programService.assignStudents(programId, assignStudentsDto);
+    return this.programService.assignStudentsV2(programId, assignStudentsDto);
   }
   // TODO Reto 3: POST   /api/program/bulk          -> crear programas en lote (todo o nada)
+  @Post('bulk')
+  bulkCreate(@Body() bulkCreateDto: BulkCreateProgramDto){
+    return this.programService.bulkCreate(bulkCreateDto);
+  }
   // TODO Reto 4: proteger los POST y el PATCH para que solo un admin pueda usarlos
 }

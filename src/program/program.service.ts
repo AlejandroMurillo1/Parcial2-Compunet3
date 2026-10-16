@@ -13,6 +13,7 @@ import { User } from '../user/entities/user.entity';
 import { PaginationDto } from '../student/dto/pagination.dto';
 import { AssignStudentsDto } from './dto/assign-students.dto';
 import { Student } from '../student/entities/student.entity';
+import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
 
 @Injectable()
 export class ProgramService {
@@ -139,20 +140,64 @@ export class ProgramService {
 
         if (existing) {
           existing.program = program;
-        }else {
-          currentStudents.push(
-            this.studentRepository.create()
-          )
+        } else {
+          const student = await this.studentRepository.findOneBy({
+            id: studentId,
+          });
+
+          if (student !== null) {
+            currentStudents.push(student);
+          } else {
+            throw new NotFoundException('Student was not found')
+          }
         }
       }
-    } catch(error) {
-      this.handleException(error);
-    }
 
+      program.students = currentStudents;
+      await queryRunner.manager.save(program);
+      await queryRunner.commitTransaction();
+
+      return await this.findOne(id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.handleException(error);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   // TODO Reto 3: bulkCreate(bulkCreateProgramDto, user) -> crea todos los programas o ninguno
   //   (transacción). Cualquier nombre/código repetido -> 409 y rollback.
+
+  async bulkCreate(bulkCreateDto: BulkCreateProgramDto) {
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const currentPrograms = await queryRunner.manager.find(Program);
+
+      for (const createProgram of bulkCreateDto.programs) {
+        const programCreated = this.programRepository.create(createProgram);
+        const existing = currentPrograms.find(
+          (program) => program.name === programCreated.name,
+        );
+        if (existing) {
+          throw new ConflictException('Program already exists');
+        } else {
+          await queryRunner.manager.save(programCreated);
+          currentPrograms.push(programCreated);
+        }
+      }
+      await queryRunner.commitTransaction();
+      return currentPrograms;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.handleException(error);
+    } finally {
+      await queryRunner.release();
+    }
+  }
 
   private handleException(error: any): never {
     if (error instanceof HttpException) throw error;
