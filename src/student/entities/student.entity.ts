@@ -7,8 +7,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Grades } from "./grades.entity";
-import { ApiProperty } from "@nestjs/swagger";
+import { Grades } from './grades.entity';
+import { ApiProperty } from '@nestjs/swagger';
 import { Program } from '../../program/entities/program.entity';
 
 @Entity()
@@ -16,7 +16,7 @@ export class Student {
 
 
     @ApiProperty({
-        example:"4fcfc5ab-7902-478f-b173-b8f1e751af12",
+    example: '4fcfc5ab-7902-478f-b173-b8f1e751af12',
         description: "Student id (UUID)",
         format: "uuid"
     })
@@ -99,7 +99,7 @@ export class Student {
 
     // TODO Reto 2: relación N:1 con Program -> propiedad `program?: Program`
     //   (opcional: un estudiante puede no tener programa; si se borra el programa, queda en NULL)
-  @ManyToOne(() => Program, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Program, (program) => program.students, { nullable: true, onDelete: 'SET NULL' })
   program?: Program;
 
     @BeforeInsert()

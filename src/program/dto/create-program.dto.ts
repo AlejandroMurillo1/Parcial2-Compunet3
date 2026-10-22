@@ -7,6 +7,7 @@ import {
   IsPositive,
   IsString,
   IsUppercase,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -17,8 +18,7 @@ export class CreateProgramDto {
   name:string;
 
   @IsString()
-  @MinLength(3)
-  @MaxLength(6)
+  @Matches(/^[A-Z]{3,6}$/)
   @IsUppercase()
   code:string;
 
