@@ -3,7 +3,8 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
-  Logger, NotFoundException,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Program } from './entities/program.entity';
@@ -31,10 +32,10 @@ export class ProgramService {
   //   - nombre o código repetido -> 409 Conflict (no 500)
   async create(createProgramDto: CreateProgramDto, user: User) {
     try {
-      const existing = await this.programRepository.findOneBy({
-        name: createProgramDto.name,
-        code: createProgramDto.code,
-      });
+      const existing = await this.programRepository.findOneBy([
+        { name: createProgramDto.name },
+        { code: createProgramDto.code },
+      ]);
 
       if (existing) {
         throw new ConflictException('Program already exists');

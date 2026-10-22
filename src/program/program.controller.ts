@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -34,7 +35,7 @@ export class ProgramController {
   }
   // TODO Reto 2: GET    /api/program/:id           -> programa con sus estudiantes
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.programService.findOne(id);
   }
 
@@ -42,7 +43,7 @@ export class ProgramController {
   @Auth(ValidRoles.admin)
   @Patch(':id/students')
   addStudents(
-    @Param('id') programId: string,
+    @Param('id', new ParseUUIDPipe()) programId: string,
     @Body() assignStudentsDto: AssignStudentsDto,
   ) {
     return this.programService.assignStudentsV2(programId, assignStudentsDto);
