@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Program } from './entities/program.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateProgramDto } from './dto/create-program.dto';
@@ -117,50 +117,59 @@ export class ProgramService {
   }
 
   async assignStudentsV2(id: string, assignStudentsDto: AssignStudentsDto) {
-    const program = await this.programRepository.preload({
-      id,
-    });
-
-    if (!program) {
-      throw new NotFoundException('Program not found');
-    }
-
     const queryRunner = this.datasource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const currentStudents = await queryRunner.manager.find(Student, {
-        where: { program: { id } },
+      await queryRunner.startTransaction();
+      const program = await queryRunner.manager.findOne(Program, {
+        where: { id },
+        relations: { students: true },
       });
 
-      for (const studentId of assignStudentsDto.studentIds) {
-        const existing = currentStudents.find(
-          (student) => student.id === studentId,
-        );
-
-        if (existing) {
-          existing.program = program;
-        } else {
-          const student = await this.studentRepository.findOneBy({
-            id: studentId,
-          });
-
-          if (student !== null) {
-            currentStudents.push(student);
-          } else {
-            throw new NotFoundException('Student was not found')
-          }
-        }
+      if (!program) {
+        throw new NotFoundException('Program not found');
       }
+      const studentIds = [...new Set(assignStudentsDto.studentIds)];
+      const students = await queryRunner.manager.find(Student, {
+        where: { id: In(studentIds) },
+      });
+      const foundIds = new Set(students.map((student) => student.id));
 
-      program.students = currentStudents;
-      await queryRunner.manager.save(program);
+      const missingIds = studentIds.filter(
+        (studentId) => !foundIds.has(studentId),
+      );
+
+      if (missingIds.length > 0) {
+        throw new NotFoundException(
+          `Students not found: ${missingIds.join(', ')}`,
+        );
+      }
+      const currentIds = new Set(
+        program.students?.map((student) => student.id),
+      );
+
+      const studentsToAssign = students.filter(
+        (student) => !currentIds.has(student.id),
+      );
+      for (const student of studentsToAssign) {
+        student.program = program;
+      }
+      if (studentsToAssign.length > 0) {
+        await queryRunner.manager.save(Student, studentsToAssign);
+      }
+      const updatedProgram = await queryRunner.manager.findOne(Program, {
+        where: { id },
+        relations: { students: true },
+      });
+
       await queryRunner.commitTransaction();
 
-      return await this.findOne(id);
+      return updatedProgram;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
+      if (queryRunner.isTransactionActive) {
+        await queryRunner.rollbackTransaction();
+      }
       this.handleException(error);
     } finally {
       await queryRunner.release();
@@ -203,6 +212,7 @@ export class ProgramService {
   private handleException(error: any): never {
     if (error instanceof HttpException) throw error;
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (error.code === '23505') throw new ConflictException(error.detail);
 
     this.logger.error(error);
