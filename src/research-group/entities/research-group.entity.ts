@@ -19,7 +19,7 @@ export class ResearchGroup {
   @Column('text', { unique: true })
   acronym: string;
   
-  @Column('number')
+  @Column('int')
   maxMembers: number;
   
   @OneToMany(() => Student, (student) => student.researchGroup)

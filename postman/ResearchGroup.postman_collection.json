@@ -1,0 +1,2123 @@
+{
+  "info": {
+    "name": "ResearchGroup Module - NestJS",
+    "description": "Pruebas del módulo research-group (POST /research-group y PATCH /research-group/:id/members).\n\nOrden recomendado: ejecutar con Collection Runner en orden (00 → 03).\nRequiere un usuario con rol admin y otro teacher.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 - Auth",
+      "item": [
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j = pm.response.json();",
+                  "const t = j.token || j.accessToken || j.access_token;",
+                  "pm.test('Devuelve un token JWT', () => pm.expect(t).to.be.a('string'));",
+                  "pm.collectionVariables.set('token', t);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login teacher (rol sin permisos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j = pm.response.json();",
+                  "const t = j.token || j.accessToken || j.access_token;",
+                  "pm.test('Devuelve un token JWT', () => pm.expect(t).to.be.a('string'));",
+                  "pm.collectionVariables.set('teacherToken', t);"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Ajusta la ruta /auth/login y el campo del token si tu AuthController es distinto."
+    },
+    {
+      "name": "01 - Setup",
+      "item": [
+        {
+          "name": "(Opcional) Ejecutar seed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Borra estudiantes y research groups, y los vuelve a insertar. Necesita un usuario admin en BD."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('SEED EXECUTED', () => pm.expect(pm.response.text()).to.include('SEED EXECUTED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear student 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"RG Tester One\",\n  \"age\": 21,\n  \"email\": \"rgtest1_{{$timestamp}}@test.com\",\n  \"isActive\": true,\n  \"gender\": \"Other\",\n  \"favoriteSubjects\": [\n    \"Physics\",\n    \"Math\"\n  ],\n  \"grades\": [\n    {\n      \"subject\": \"Physics\",\n      \"grade\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('s1', j.id);",
+                  "pm.collectionVariables.set('s1Nick', j.nickname);",
+                  "pm.test('Student con id', () => pm.expect(j.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear student 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"RG Tester Two\",\n  \"age\": 22,\n  \"email\": \"rgtest2_{{$timestamp}}@test.com\",\n  \"isActive\": true,\n  \"gender\": \"Other\",\n  \"favoriteSubjects\": [\n    \"Physics\",\n    \"Math\"\n  ],\n  \"grades\": [\n    {\n      \"subject\": \"Physics\",\n      \"grade\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('s2', j.id);",
+                  "pm.collectionVariables.set('s2Nick', j.nickname);",
+                  "pm.test('Student con id', () => pm.expect(j.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear student 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"RG Tester Three\",\n  \"age\": 23,\n  \"email\": \"rgtest3_{{$timestamp}}@test.com\",\n  \"isActive\": true,\n  \"gender\": \"Other\",\n  \"favoriteSubjects\": [\n    \"Physics\",\n    \"Math\"\n  ],\n  \"grades\": [\n    {\n      \"subject\": \"Physics\",\n      \"grade\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('s3', j.id);",
+                  "pm.collectionVariables.set('s3Nick', j.nickname);",
+                  "pm.test('Student con id', () => pm.expect(j.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear student 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"RG Tester Four\",\n  \"age\": 24,\n  \"email\": \"rgtest4_{{$timestamp}}@test.com\",\n  \"isActive\": true,\n  \"gender\": \"Other\",\n  \"favoriteSubjects\": [\n    \"Physics\",\n    \"Math\"\n  ],\n  \"grades\": [\n    {\n      \"subject\": \"Physics\",\n      \"grade\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('s4', j.id);",
+                  "pm.collectionVariables.set('s4Nick', j.nickname);",
+                  "pm.test('Student con id', () => pm.expect(j.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Crea 4 estudiantes de prueba y guarda sus ids en variables. Si tu ruta de students es distinta, ajusta o setea s1..s4 a mano."
+    },
+    {
+      "name": "02 - Crear Research Group",
+      "item": [
+        {
+          "name": "Crear grupo (OK, maxMembers=3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{rgName}}\",\n  \"acronym\": \"{{rgAcronym}}\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';",
+                  "let a=''; for(let i=0;i<5;i++) a+=L[Math.floor(Math.random()*26)];",
+                  "pm.collectionVariables.set('rgAcronym', a);",
+                  "pm.collectionVariables.set('rgName', 'Test Group ' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('rgId', j.id);",
+                  "pm.test('Devuelve los datos del grupo', () => {",
+                  "  pm.expect(j.id).to.be.a('string');",
+                  "  pm.expect(j.name).to.eql(pm.collectionVariables.get('rgName'));",
+                  "  pm.expect(j.acronym).to.eql(pm.collectionVariables.get('rgAcronym'));",
+                  "  pm.expect(j.maxMembers).to.eql(3);",
+                  "});",
+                  "pm.test('createdBy es el admin autenticado', () => pm.expect(j.createdBy).to.have.property('id'));",
+                  "pm.test('SEGURIDAD: la respuesta NO filtra el hash del password', () => pm.expect(j.createdBy.password).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear segundo grupo (para mover estudiantes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{rgName2}}\",\n  \"acronym\": \"{{rgAcronym2}}\",\n  \"maxMembers\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';",
+                  "let a=''; for(let i=0;i<5;i++) a+=L[Math.floor(Math.random()*26)];",
+                  "pm.collectionVariables.set('rgAcronym2', a);",
+                  "pm.collectionVariables.set('rgName2', 'Test Group B ' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('rgId2', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear grupo con maxMembers=1 (para probar límite)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{rgName3}}\",\n  \"acronym\": \"{{rgAcronym3}}\",\n  \"maxMembers\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ';",
+                  "let a=''; for(let i=0;i<5;i++) a+=L[Math.floor(Math.random()*26)];",
+                  "pm.collectionVariables.set('rgAcronym3', a);",
+                  "pm.collectionVariables.set('rgName3', 'Test Group Small ' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('rgIdSmall', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nombre duplicado → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{rgName}}\",\n  \"acronym\": \"ZZZZZ\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Mensaje menciona que ya existe', () => pm.expect(pm.response.json().message).to.include('already exists'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acrónimo duplicado → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nombre completamente distinto {{$timestamp}}\",\n  \"acronym\": \"{{rgAcronym}}\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: name < 3 caracteres",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ab\",\n  \"acronym\": \"VALID\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: name no es string",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": 12345,\n  \"acronym\": \"VALID\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: acronym en minúsculas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"abc\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: acronym de 1 letra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"A\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: acronym de 6 letras",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"ABCDEF\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: acronym con números",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"AB12\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: maxMembers = 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"VALID\",\n  \"maxMembers\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: maxMembers negativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"VALID\",\n  \"maxMembers\": -5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: maxMembers decimal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"VALID\",\n  \"maxMembers\": 2.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: maxMembers string",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo valido\",\n  \"acronym\": \"VALID\",\n  \"maxMembers\": \"3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: body vacío",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Mensaje de validación', () => pm.expect(pm.response.json().message).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin token → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sin token\",\n  \"acronym\": \"NOTOK\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rol teacher → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Teacher group\",\n  \"acronym\": \"TEACH\",\n  \"maxMembers\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{teacherToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Asignar estudiantes",
+      "item": [
+        {
+          "name": "Asignar s1 y s2 → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\",\n    \"{{s2}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('El grupo tiene 2 miembro(s)', () => pm.expect(j.students).to.have.lengthOf(2));",
+                  "pm.test('Contiene s1', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s1')));",
+                  "pm.test('Contiene s2', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s2')));",
+                  "pm.test('BUG? nickname no debe alterarse al asignar (hook @BeforeUpdate concatena la edad otra vez)', () => {",
+                  "  const s1 = j.students.find(s => s.id === pm.collectionVariables.get('s1'));",
+                  "  pm.expect(s1.nickname).to.eql(pm.collectionVariables.get('s1Nick'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotente: repetir s1,s1,s2 (con duplicados) → 200, sigue en 2",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\",\n    \"{{s1}}\",\n    \"{{s2}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('El grupo tiene 2 miembro(s)', () => pm.expect(j.students).to.have.lengthOf(2));",
+                  "pm.test('Contiene s1', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s1')));",
+                  "pm.test('Contiene s2', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s2')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar s3 → 200 (grupo lleno 3/3)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s3}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('El grupo tiene 3 miembro(s)', () => pm.expect(j.students).to.have.lengthOf(3));",
+                  "pm.test('Contiene s1', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s1')));",
+                  "pm.test('Contiene s2', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s2')));",
+                  "pm.test('Contiene s3', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s3')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exceder límite con s4 → 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s4}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Mensaje de límite', () => pm.expect(pm.response.json().message).to.include('Limit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar rollback: sigue en 3 miembros (s4 NO quedó asignado)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('El grupo tiene 3 miembro(s)', () => pm.expect(j.students).to.have.lengthOf(3));",
+                  "pm.test('Contiene s1', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s1')));",
+                  "pm.test('Contiene s2', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s2')));",
+                  "pm.test('Contiene s3', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s3')));",
+                  "pm.test('s4 no está en el grupo', () => pm.expect(j.students.map(s => s.id)).to.not.include(pm.collectionVariables.get('s4')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mover s3 al grupo 2 → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId2}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId2}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s3}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('El grupo tiene 1 miembro(s)', () => pm.expect(j.students).to.have.lengthOf(1));",
+                  "pm.test('Contiene s3', () => pm.expect(j.students.map(s => s.id)).to.include(pm.collectionVariables.get('s3')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grupo maxMembers=1 con 2 estudiantes a la vez → 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgIdSmall}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgIdSmall}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\",\n    \"{{s2}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estudiante inexistente → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{nonExistentUuid}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Lista el id faltante', () => pm.expect(pm.response.json().message).to.include(pm.collectionVariables.get('nonExistentUuid')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mezcla existente + inexistente → 404 (no asigna nada)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgIdSmall}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgIdSmall}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s4}}\",\n    \"{{nonExistentUuid}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grupo inexistente → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{nonExistentUuid}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{nonExistentUuid}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Group not found', () => pm.expect(pm.response.json().message).to.include('Research group not found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ID de grupo inválido (no UUID) → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/abc-123/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "abc-123",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: studentIds vacío",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: studentIds no es array",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": \"no-soy-array\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: studentIds con valor no UUID",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"123\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: UUID versión 1 (se exige v4)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"6ba7b810-9dad-11d1-80b4-00c04fd430c8\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validación: body sin studentIds",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin token → 401",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rol teacher → 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/research-group/{{rgId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "research-group",
+                "{{rgId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    \"{{s1}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{teacherToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123"
+    },
+    {
+      "key": "teacherEmail",
+      "value": "teacher@example.com"
+    },
+    {
+      "key": "teacherPassword",
+      "value": "Teacher123"
+    },
+    {
+      "key": "nonExistentUuid",
+      "value": "00000000-0000-4000-8000-000000000000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "teacherToken",
+      "value": ""
+    },
+    {
+      "key": "rgId",
+      "value": ""
+    },
+    {
+      "key": "rgId2",
+      "value": ""
+    },
+    {
+      "key": "rgIdSmall",
+      "value": ""
+    },
+    {
+      "key": "rgName",
+      "value": ""
+    },
+    {
+      "key": "rgName2",
+      "value": ""
+    },
+    {
+      "key": "rgName3",
+      "value": ""
+    },
+    {
+      "key": "rgAcronym",
+      "value": ""
+    },
+    {
+      "key": "rgAcronym2",
+      "value": ""
+    },
+    {
+      "key": "rgAcronym3",
+      "value": ""
+    },
+    {
+      "key": "s1",
+      "value": ""
+    },
+    {
+      "key": "s2",
+      "value": ""
+    },
+    {
+      "key": "s3",
+      "value": ""
+    },
+    {
+      "key": "s4",
+      "value": ""
+    },
+    {
+      "key": "s1Nick",
+      "value": ""
+    },
+    {
+      "key": "s2Nick",
+      "value": ""
+    },
+    {
+      "key": "s3Nick",
+      "value": ""
+    },
+    {
+      "key": "s4Nick",
+      "value": ""
+    }
+  ]
+}
