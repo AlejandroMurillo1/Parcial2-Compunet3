@@ -179,30 +179,56 @@ export class ProgramService {
   // TODO Reto 3: bulkCreate(bulkCreateProgramDto, user) -> crea todos los programas o ninguno
   //   (transacción). Cualquier nombre/código repetido -> 409 y rollback.
 
-  async bulkCreate(bulkCreateDto: BulkCreateProgramDto) {
+  async bulkCreate(bulkCreateDto: BulkCreateProgramDto, user: User) {
     const queryRunner = this.datasource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const currentPrograms = await queryRunner.manager.find(Program);
+      await queryRunner.startTransaction();
 
-      for (const createProgram of bulkCreateDto.programs) {
-        const programCreated = this.programRepository.create(createProgram);
-        const existing = currentPrograms.find(
-          (program) => program.name === programCreated.name,
-        );
-        if (existing) {
-          throw new ConflictException('Program already exists');
-        } else {
-          await queryRunner.manager.save(programCreated);
-          currentPrograms.push(programCreated);
+      const existingPrograms = await queryRunner.manager.find(Program);
+
+      const existingNames = new Set(
+        existingPrograms.map((program) => program.name),
+      );
+
+      const existingCodes = new Set(
+        existingPrograms.map((program) => program.code),
+      );
+
+      for (const program of bulkCreateDto.programs) {
+        if (existingNames.has(program.name)) {
+          throw new ConflictException(
+            `Program name already exists: ${program.name}`,
+          );
+        }
+
+        if (existingCodes.has(program.code)) {
+          throw new ConflictException(
+            `Program code already exists: ${program.code}`,
+          );
         }
       }
+
+      const programsToCreate = bulkCreateDto.programs.map((createProgram) =>
+        queryRunner.manager.create(Program, {
+          createProgram,
+          createdBy: user,
+        }),
+      );
+
+      const createdPrograms = await queryRunner.manager.save(
+        Program,
+        programsToCreate,
+      );
+
       await queryRunner.commitTransaction();
-      return currentPrograms;
+      return createdPrograms;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
+      if (queryRunner.isTransactionActive) {
+        await queryRunner.rollbackTransaction();
+      }
+
       this.handleException(error);
     } finally {
       await queryRunner.release();
