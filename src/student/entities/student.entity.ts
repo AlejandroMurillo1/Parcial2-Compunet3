@@ -10,6 +10,7 @@ import {
 import { Grades } from './grades.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Program } from '../../program/entities/program.entity';
+import { ResearchGroup } from '../../research-group/entities/research-group.entity';
 
 @Entity()
 export class Student {
@@ -95,7 +96,10 @@ export class Student {
         (grade) => grade.student,
         {cascade: true, eager: true}
     )
-    grades?: Grades[]
+    grades?: Grades[];
+
+  @ManyToOne(() => ResearchGroup, (rg) => rg.students, { nullable: true })
+  researchGroup?: ResearchGroup;
 
     // TODO Reto 2: relación N:1 con Program -> propiedad `program?: Program`
     //   (opcional: un estudiante puede no tener programa; si se borra el programa, queda en NULL)

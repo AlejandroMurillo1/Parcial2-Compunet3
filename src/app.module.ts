@@ -5,6 +5,7 @@ import { StudentModule } from './student/student.module';
 import { UserModule } from './user/user.module';
 import { SeedModule } from './seed/seed.module';
 import { ProgramModule } from './program/program.module';
+import { ResearchGroupModule } from './research-group/research-group.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ProgramModule } from './program/program.module';
     SeedModule,
     // TODO Reto 1: registra aquí el ProgramModule
     ProgramModule,
+    ResearchGroupModule,
   ],
   controllers: [],
   providers: [],

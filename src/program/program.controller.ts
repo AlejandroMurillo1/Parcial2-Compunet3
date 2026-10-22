@@ -52,8 +52,11 @@ export class ProgramController {
   //  -> crear programas en lote (todo o nada)
   @Auth(ValidRoles.admin)
   @Post('bulk')
-  bulkCreate(@Body() bulkCreateDto: BulkCreateProgramDto) {
-    return this.programService.bulkCreate(bulkCreateDto);
+  bulkCreate(
+    @Body() bulkCreateDto: BulkCreateProgramDto,
+    @GetUser() user: User,
+  ) {
+    return this.programService.bulkCreate(bulkCreateDto, user);
   }
   // TODO Reto 4: proteger los POST y el PATCH para que solo un admin pueda usarlos
 }
