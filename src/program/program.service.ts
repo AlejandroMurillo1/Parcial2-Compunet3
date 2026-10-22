@@ -212,7 +212,7 @@ export class ProgramService {
 
       const programsToCreate = bulkCreateDto.programs.map((createProgram) =>
         queryRunner.manager.create(Program, {
-          createProgram,
+          ...createProgram,
           createdBy: user,
         }),
       );
